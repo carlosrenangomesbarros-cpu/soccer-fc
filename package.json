@@ -1,0 +1,8 @@
+{
+  "name": "soccer-fc",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Protótipo 3D mobile de futebol com estrutura multiplayer",
+  "scripts": {"start": "node server.js"},
+  "dependencies": {"ws": "^8.18.0"}
+}
