@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>SOCCER FC</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#071b12;color:white;font-family:system-ui,Arial;touch-action:none}
+#game{position:fixed;inset:0}canvas{display:block}
+#top{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:3;background:#071b12d9;border:1px solid #ffffff44;border-radius:14px;padding:8px 18px;text-align:center;min-width:230px}
+#top strong{font-size:20px;letter-spacing:2px;color:#a9ffbd}#score{font-weight:800;font-size:18px}#status{font-size:11px;color:#d5e8db}
+#menu{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(#00180caa,#00180cee);z-index:5;padding:20px}
+.panel{width:min(440px,100%);background:#0b281c;border:1px solid #67db8c66;border-radius:22px;padding:24px;box-shadow:0 15px 60px #0009;text-align:center}
+.panel h1{margin:0;color:#a9ffbd;font-size:34px;letter-spacing:3px}.panel p{color:#d0e3d6;font-size:14px;line-height:1.5}
+input{width:100%;padding:13px;border-radius:12px;border:1px solid #5b9b70;background:#071b12;color:white;font-size:16px;margin:6px 0}
+button{border:0;border-radius:13px;padding:13px 17px;font-weight:800;font-size:14px;background:#9cf5ae;color:#07351a;margin:5px;cursor:pointer}
+button.secondary{background:#244b36;color:white;border:1px solid #6eaa80}
+#controls{position:fixed;inset:0;z-index:4;pointer-events:none;display:none}
+#stick{position:absolute;left:22px;bottom:26px;width:128px;height:128px;border-radius:50%;background:#ffffff20;border:2px solid #ffffff66;pointer-events:auto}
+#nub{position:absolute;width:54px;height:54px;border-radius:50%;background:#c8ffd3bb;left:35px;top:35px}
+.actions{position:absolute;right:18px;bottom:26px;display:grid;grid-template-columns:72px 72px;gap:10px;pointer-events:auto}
+.actions button{height:66px;border-radius:50%;padding:4px;background:#ffffffdf;color:#07351a;box-shadow:0 3px 12px #0008}
+#hint{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);z-index:3;font-size:11px;color:#ffffffb9;background:#00180c99;padding:5px 10px;border-radius:10px;white-space:nowrap}
+#room{font-size:12px;color:#a9ffbd;min-height:18px}
+@media(min-width:800px){#stick{left:40px;bottom:35px}.actions{right:40px;bottom:35px}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="top"><strong>SOCCER FC</strong><div id="score">VOCÊ 0 × 0 IA</div><div id="status">TREINO • 1º TEMPO</div></div>
+<div id="menu"><div class="panel"><h1>SOCCER FC</h1><p>Futebol 3D para celular. Entre em campo, mova seu jogador e tente marcar!</p>
+<input id="playerName" maxlength="16" value="Renan" placeholder="Seu nome">
+<label for="continent" style="display:block;text-align:left;font-size:12px;color:#bfe8cb;margin-top:8px">CONTINENTE</label>
+<select id="continent" style="width:100%;padding:13px;border-radius:12px;border:1px solid #5b9b70;background:#071b12;color:white;font-size:16px;margin:6px 0">
+<option value="europe">🇪🇺 Seleções da Europa</option><option value="america">🌎 Seleções da América</option>
+</select>
+<label for="team" style="display:block;text-align:left;font-size:12px;color:#bfe8cb;margin-top:8px">SUA SELEÇÃO</label>
+<select id="team" style="width:100%;padding:13px;border-radius:12px;border:1px solid #5b9b70;background:#071b12;color:white;font-size:16px;margin:6px 0"></select>
+<input id="roomCode" maxlength="12" placeholder="Código da sala (opcional)">
+<button id="play">JOGAR TREINO</button><button id="online" class="secondary">ENTRAR ONLINE</button>
+<div id="room">Treino funciona sem servidor. Online precisa do servidor deste projeto.</div></div></div>
+<div id="controls"><div id="stick"><div id="nub"></div></div><div class="actions"><button id="pass">PASSE</button><button id="shoot">CHUTE</button><button id="sprint">CORRER</button><button id="reset">RECOMEÇAR</button></div></div>
+<div id="hint">Use o controle esquerdo para mover • PASSE • CHUTE</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+const root=document.querySelector('#game');
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x87c9ed); scene.fog=new THREE.Fog(0x87c9ed,35,90);
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,150);
+const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight); renderer.shadowMap.enabled=true; root.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff,0x315b38,2));
+const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-15,25,12);sun.castShadow=true;scene.add(sun);
+const grass=new THREE.Mesh(new THREE.PlaneGeometry(48,30),new THREE.MeshStandardMaterial({color:0x218442,roughness:1}));grass.rotation.x=-Math.PI/2;grass.receiveShadow=true;scene.add(grass);
+for(let i=0;i<12;i++){let stripe=new THREE.Mesh(new THREE.PlaneGeometry(4,30),new THREE.MeshStandardMaterial({color:i%2?0x238b45:0x1e7a3c}));stripe.rotation.x=-Math.PI/2;stripe.position.set(-22+i*4,0.012,0);scene.add(stripe)}
+function line(x,z,w,h){let m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:0xffffff}));m.rotation.x=-Math.PI/2;m.position.set(x,.025,z);scene.add(m)}
+line(0,0,.12,29);line(0,-14,47,.12);line(0,14,47,.12);line(-23.5,0,.12,28);line(23.5,0,.12,28);
+const circle=new THREE.Mesh(new THREE.RingGeometry(4.8,4.92,64),new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide}));circle.rotation.x=-Math.PI/2;circle.position.y=.03;scene.add(circle);
+line(-17,0,.12,14);line(17,0,.12,14);line(-20,0,7,.12);line(20,0,7,.12);
+function goal(x){let g=new THREE.Group();let mat=new THREE.MeshStandardMaterial({color:0xffffff});for(let z of [-3,3]){let p=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,3,8),mat);p.position.set(x,1.5,z);g.add(p)}let bar=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,6,8),mat);bar.rotation.x=Math.PI/2;bar.position.set(x,3,0);g.add(bar);scene.add(g)}
+goal(-23);goal(23);
+function person(color,x,z){let group=new THREE.Group();let shirt=new THREE.Mesh(new THREE.CylinderGeometry(.48,.55,1.25,12),new THREE.MeshStandardMaterial({color}));shirt.position.y=1.15;shirt.castShadow=true;group.add(shirt);let head=new THREE.Mesh(new THREE.SphereGeometry(.34,16,12),new THREE.MeshStandardMaterial({color:0xd9a47b}));head.position.y=2;group.add(head);let legs=new THREE.Mesh(new THREE.BoxGeometry(.22,.75,.25),new THREE.MeshStandardMaterial({color:0x182536}));legs.position.set(-.2,.38,0);group.add(legs);let leg2=legs.clone();leg2.position.x=.2;group.add(leg2);group.position.set(x,0,z);scene.add(group);return group}
+const me=person(0x1769ff,0,4), rival=person(0xe43d3d,7,-2), mate=person(0xffd23f,-8,3);
+const ball=new THREE.Mesh(new THREE.SphereGeometry(.34,20,16),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.5}));ball.position.set(1,.35,4);ball.castShadow=true;scene.add(ball);
+for(let i=0;i<5;i++){let seam=new THREE.Mesh(new THREE.TorusGeometry(.24,.018,5,20),new THREE.MeshStandardMaterial({color:0x171717}));seam.position.copy(ball.position);seam.rotation.x=Math.PI/2;ball.add(seam)}
+const nameInput=document.querySelector('#playerName'),roomInput=document.querySelector('#roomCode'),menu=document.querySelector('#menu'),controls=document.querySelector('#controls'),scoreEl=document.querySelector('#score'),statusEl=document.querySelector('#status'),roomEl=document.querySelector('#room');
+let mode='practice',ws=null,playerId=Math.random().toString(36).slice(2,8),name='Renan',score=0,aiScore=0,move={x:0,z:0},sprinting=false,kickCooldown=0,clock=0,ballVel=new THREE.Vector3(),others={};
+const teams={europe:['🇫🇷 França','🇪🇸 Espanha','🇵🇹 Portugal','🇩🇪 Alemanha','🇮🇹 Itália','🇬🇧 Inglaterra','🇳🇱 Holanda','🇧🇪 Bélgica','🇭🇷 Croácia'],america:['🇧🇷 Brasil','🇦🇷 Argentina','🇺🇾 Uruguai','🇨🇴 Colômbia','🇲🇽 México','🇺🇸 Estados Unidos','🇨🇱 Chile','🇪🇨 Equador','🇵🇾 Paraguai']};
+const continentSelect=document.querySelector('#continent'),teamSelect=document.querySelector('#team');
+function fillTeams(){teamSelect.innerHTML='';for(const t of teams[continentSelect.value]){const o=document.createElement('option');o.value=t;o.textContent=t;teamSelect.appendChild(o)}}
+continentSelect.addEventListener('change',fillTeams);fillTeams();
+function start(online){name=(nameInput.value||'Renan').slice(0,16);const chosenTeam=teamSelect.value;mode=online?'online':'practice';menu.style.display='none';controls.style.display='block';statusEl.textContent=(online?'ONLINE':'TREINO')+' • '+chosenTeam+' • 1º TEMPO';if(online)connect()}
+function connect(){let url=location.protocol==='https:'?'wss://'+location.host+'/ws':'ws://'+location.host+'/ws';try{ws=new WebSocket(url);ws.onopen=()=>{ws.send(JSON.stringify({type:'join',id:playerId,name,room:roomInput.value||'PUBLIC'}));statusEl.textContent='ONLINE • CONECTADO'};ws.onmessage=e=>{let d=JSON.parse(e.data);if(d.type==='state'){others=d.players||{};for(const [id,p] of Object.entries(others)){if(id===playerId)continue;if(!window.remotePlayers)window.remotePlayers={};if(!window.remotePlayers[id])window.remotePlayers[id]=person(0xeeeeee,p.x,p.z);window.remotePlayers[id].position.set(p.x,0,p.z)}}};ws.onclose=()=>{statusEl.textContent='ONLINE • SERVIDOR DESCONECTADO';roomEl.textContent='Servidor não encontrado. Inicie o servidor seguindo o README.'};ws.onerror=()=>{statusEl.textContent='ONLINE • ERRO DE CONEXÃO'}}
+function kick(power){if(kickCooldown>0)return;kickCooldown=.45;let dir=new THREE.Vector3(-1,0,0);if(me.position.x<0)dir.set(-1,0,0);else dir.set(1,0,0);if(Math.abs(ball.position.x-me.position.x)>4||Math.abs(ball.position.z-me.position.z)>4)return;ballVel.add(dir.multiplyScalar(power));ballVel.z+=(ball.position.z-me.position.z)*.45}
+document.querySelector('#play').onclick=()=>start(false);document.querySelector('#online').onclick=()=>start(true);
+document.querySelector('#pass').onclick=()=>kick(11);document.querySelector('#shoot').onclick=()=>kick(20);document.querySelector('#sprint').ontouchstart=()=>sprinting=true;document.querySelector('#sprint').ontouchend=()=>sprinting=false;document.querySelector('#sprint').onmousedown=()=>sprinting=true;document.querySelector('#sprint').onmouseup=()=>sprinting=false;
+document.querySelector('#reset').onclick=()=>{me.position.set(0,0,4);ball.position.set(1,.35,4);ballVel.set(0,0,0);score=aiScore=0;scoreEl.textContent='VOCÊ 0 × 0 IA'};
+let stick=document.querySelector('#stick'),nub=document.querySelector('#nub'),active=false,center={x:0,y:0};
+function setStick(e){let r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.hypot(dx,dy),max=43;if(len>max){dx=dx/len*max;dy=dy/len*max}nub.style.transform=`translate(${dx}px,${dy}px)`;move.x=dx/max;move.z=dy/max}
+stick.addEventListener('pointerdown',e=>{active=true;stick.setPointerCapture(e.pointerId);setStick(e)});stick.addEventListener('pointermove',e=>{if(active)setStick(e)});function endStick(){active=false;move={x:0,z:0};nub.style.transform='translate(0,0)'}stick.addEventListener('pointerup',endStick);stick.addEventListener('pointercancel',endStick);
+addEventListener('keydown',e=>{if(e.key==='ArrowUp'||e.key==='w')move.z=-1;if(e.key==='ArrowDown'||e.key==='s')move.z=1;if(e.key==='ArrowLeft'||e.key==='a')move.x=-1;if(e.key==='ArrowRight'||e.key==='d')move.x=1;if(e.key===' ')kick(20)});addEventListener('keyup',()=>move={x:0,z:0});
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function animate(){requestAnimationFrame(animate);let dt=Math.min(clock?((performance.now()-clock)/1000):.016,.04);clock=performance.now();let speed=sprinting?10:6;me.position.x=clamp(me.position.x+move.x*speed*dt,-21,21);me.position.z=clamp(me.position.z+move.z*speed*dt,-12,12);me.rotation.y=Math.atan2(move.x,-move.z);
+rival.position.x=clamp(rival.position.x+Math.sign(ball.position.x-rival.position.x)*dt*2.3,-21,21);rival.position.z+=(ball.position.z-rival.position.z)*dt*.45;
+ball.position.add(ballVel.clone().multiplyScalar(dt));ballVel.multiplyScalar(.985);ball.position.y=.35+Math.abs(Math.sin(performance.now()*.012))*Math.min(ballVel.length()*.04,.3);if(Math.abs(ball.position.x)>23){if(ball.position.z<3&&ball.position.z>-3){if(ball.position.x<0)score++;else aiScore++;scoreEl.textContent=`VOCÊ ${score} × ${aiScore} IA`;ball.position.set(0,.35,0);ballVel.set(0,0,0)}else ballVel.x*=-.7}if(Math.abs(ball.position.z)>14)ballVel.z*=-.7;
+if(me.position.distanceTo(ball.position)<1.35&&ballVel.length()<1)ball.position.x+=(me.position.x-ball.position.x)*.04;
+if(kickCooldown>0)kickCooldown-=dt;
+if(mode==='online'&&ws&&ws.readyState===1&&Math.random()<.2)ws.send(JSON.stringify({type:'move',id:playerId,x:me.position.x,z:me.position.z,name}));
+camera.position.lerp(new THREE.Vector3(me.position.x+9,13,me.position.z+14),.055);camera.lookAt(me.position.x,0,me.position.z);
+renderer.render(scene,camera)}
+animate();addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body></html>
